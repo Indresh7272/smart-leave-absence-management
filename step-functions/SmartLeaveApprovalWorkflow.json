@@ -6,7 +6,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:ValidateLeaveFunction",
+        "FunctionName": "arn:aws:lambda:ap-south-1:<AWS_ACCOUNT_ID>:function:ValidateLeaveFunction",
         "Payload.$": "$"
       },
       "ResultSelector": {
