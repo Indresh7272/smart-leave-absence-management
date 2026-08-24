@@ -1,0 +1,173 @@
+{
+  "Comment": "Smart Leave & Absence Management Engine",
+  "StartAt": "Validate Leave",
+  "States": {
+    "Validate Leave": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:ValidateLeaveFunction",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "valid.$": "$.Payload.valid",
+        "reason.$": "$.Payload.reason"
+      },
+      "ResultPath": "$.validation",
+      "Next": "Leave Valid?"
+    },
+    "Leave Valid?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.validation.valid",
+          "BooleanEquals": false,
+          "Next": "Validation Rejected"
+        }
+      ],
+      "Default": "Check Balance"
+    },
+    "Check Balance": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:CheckLeaveBalanceFunction",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "balance_valid.$": "$.Payload.balance_valid",
+        "available_balance.$": "$.Payload.available_balance",
+        "requested_days.$": "$.Payload.requested_days",
+        "reason.$": "$.Payload.reason"
+      },
+      "ResultPath": "$.balance",
+      "Next": "Balance Sufficient?"
+    },
+    "Balance Sufficient?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.balance.balance_valid",
+          "BooleanEquals": false,
+          "Next": "Balance Rejected"
+        }
+      ],
+      "Default": "Check Overlap"
+    },
+    "Check Overlap": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:CheckLeaveOverlapFunction",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "overlap.$": "$.Payload.overlap",
+        "reason.$": "$.Payload.reason"
+      },
+      "ResultPath": "$.overlap",
+      "Next": "Overlap?"
+    },
+    "Overlap?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.overlap.overlap",
+          "BooleanEquals": true,
+          "Next": "Overlap Rejected"
+        }
+      ],
+      "Default": "Manager Approval"
+    },
+    "Validation Rejected": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "REJECTED",
+        "reason.$": "$.validation.reason"
+      },
+      "End": true
+    },
+    "Balance Rejected": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "REJECTED",
+        "reason.$": "$.balance.reason"
+      },
+      "End": true
+    },
+    "Overlap Rejected": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "REJECTED",
+        "reason.$": "$.overlap.reason"
+      },
+      "End": true
+    },
+    "Manager Approval": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "TimeoutSeconds": 172800,
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:ManagerApprovalFunction",
+        "Payload": {
+          "request_id.$": "$.request_id",
+          "employee_id.$": "$.employee_id",
+          "manager_id.$": "$.manager_id",
+          "leave_type.$": "$.leave_type",
+          "start_date.$": "$.start_date",
+          "end_date.$": "$.end_date",
+          "total_days.$": "$.total_days",
+          "taskToken.$": "$$.Task.Token"
+        }
+      },
+      "ResultPath": "$.manager_approval",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "Next": "Manager Approval Timeout"
+        }
+      ],
+      "Next": "Manager Decision"
+    },
+    "Manager Approval Timeout": {
+      "Type": "Pass",
+      "Result": {
+        "status": "REJECTED",
+        "reason": "Manager approval timed out after 48 hours."
+      },
+      "End": true
+    },
+    "Manager Decision": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.manager_approval.decision",
+          "StringEquals": "APPROVED",
+          "Next": "Leave Approved"
+        },
+        {
+          "Variable": "$.manager_approval.decision",
+          "StringEquals": "REJECTED",
+          "Next": "Leave Rejected"
+        }
+      ],
+      "Default": "Leave Rejected"
+    },
+    "Leave Approved": {
+      "Type": "Pass",
+      "Result": {
+        "status": "APPROVED"
+      },
+      "End": true
+    },
+    "Leave Rejected": {
+      "Type": "Pass",
+      "Result": {
+        "status": "REJECTED"
+      },
+      "End": true
+    }
+  }
+}
