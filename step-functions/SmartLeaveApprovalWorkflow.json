@@ -31,7 +31,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:CheckLeaveBalanceFunction",
+        "FunctionName": "arn:aws:lambda:ap-south-1:<AWS_ACCOUNT_ID>:function:CheckLeaveBalanceFunction",
         "Payload.$": "$"
       },
       "ResultSelector": {
@@ -58,7 +58,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:CheckLeaveOverlapFunction",
+        "FunctionName": "arn:aws:lambda:ap-south-1:<AWS_ACCOUNT_ID>:function:CheckLeaveOverlapFunction",
         "Payload.$": "$"
       },
       "ResultSelector": {
@@ -108,7 +108,7 @@
       "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
       "TimeoutSeconds": 172800,
       "Parameters": {
-        "FunctionName": "arn:aws:lambda:ap-south-1:367306032058:function:ManagerApprovalFunction",
+        "FunctionName": "arn:aws:lambda:ap-south-1:<AWS_ACCOUNT_ID>:function:ManagerApprovalFunction",
         "Payload": {
           "request_id.$": "$.request_id",
           "employee_id.$": "$.employee_id",
